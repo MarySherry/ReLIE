@@ -1,24 +1,41 @@
 import torch
 import cv2
-from utils import Neighbour, config, preprocess, generate_tesseract_results
+from utils import Neighbour, config, preprocess
+import generate_tesseract_results
 import extract_candidates
 import pickle
 import traceback
 import numpy as np
 import argparse
 import os
+import json
+from pathlib import Path
 
 
 def attach_neighbour_candidates(width, height, ocr_data, candidates):
-    empty_index = [i for i, ele in enumerate(ocr_data['text']) if ele == ""]
-    for key in ocr_data.keys():
-        ocr_data[key] = [j for i, j in enumerate(ocr_data[key]) if i not in empty_index]
+    # empty_index = [i for i, ele in enumerate(ocr_data['text']) if ele == ""]
+    # for key in ocr_data.keys():
+    #     ocr_data[key] = [j for i, j in enumerate(ocr_data[key]) if i not in empty_index]
+    # words = []
+    # for txt, x, y, w, h in zip(ocr_data['text'], ocr_data['left'], ocr_data['top'], ocr_data['width'],
+    #                            ocr_data['height']):
+    #     x2 = x + w
+    #     y2 = y + h
+    #     words.append({'text': txt, 'x1': x, 'y1': y, 'x2': x2, 'y2': y2})
+    BlockType_word = [item for item in ocr_data['Blocks'] if
+                      item['BlockType'] == 'WORD']
     words = []
-    for txt, x, y, w, h in zip(ocr_data['text'], ocr_data['left'], ocr_data['top'], ocr_data['width'],
-                               ocr_data['height']):
-        x2 = x + w
-        y2 = y + h
-        words.append({'text': txt, 'x1': x, 'y1': y, 'x2': x2, 'y2': y2})
+    for item in BlockType_word:
+        words.append({
+            'text': item['Text'],
+            'x1': item['Geometry']['BoundingBox']['Left'] * width,
+            'y1': item['Geometry']['BoundingBox']['Top'] * height,
+            'x2': item['Geometry']['BoundingBox']['Left'] * width +
+                  item['Geometry']['BoundingBox']['Width'] * width,
+            'y2': item['Geometry']['BoundingBox'][
+                          'Height'] * height + item['Geometry']['BoundingBox'][
+                          'Top'] * height})
+
     x_offset = int(width * 0.1)
     y_offset = int(height * 0.1)
     for cls, both_cads in candidates.items():
@@ -33,12 +50,13 @@ def load_saved_vocab(path):
     return cached_data['vocab'], cached_data['mapping']
 
 
-def parse_input(annotations, fields_dict, n_neighbours=5, vocabulary=None):
+def parse_input(annotations, fields_dict, n_neighbours=3, vocabulary=None):
     """Generates input samples from annotations data."""
     field_ids = list()
     candidate_cords = list()
     neighbours = list()
     neighbour_cords = list()
+    mask = list()
     n_classes = len(fields_dict)
     for field, value in annotations.items():
         if annotations[field]:
@@ -56,9 +74,10 @@ def parse_input(annotations, fields_dict, n_neighbours=5, vocabulary=None):
                 )
                 neighbours.append(_neighbours)
                 neighbour_cords.append(_neighbour_cords)
+                mask.append([[1 if i else 0 for i in _neighbours]])
     return torch.Tensor(field_ids).type(torch.FloatTensor), torch.Tensor(candidate_cords).type(
         torch.FloatTensor), torch.Tensor(neighbours).type(torch.int64), torch.Tensor(neighbour_cords).type(
-        torch.FloatTensor)
+        torch.FloatTensor),torch.Tensor(mask).type(torch.FloatTensor)
 
 
 def normalize_coordinates(annotations, width, height):
@@ -115,23 +134,28 @@ def parse_args():
     return args
 
 
-def main():
-    args = parse_args()
-    if torch.cuda.is_available() and not args.cuda:
-        print("WARNING: You have a CUDA device, so you should probably run with --cuda")
-    if not os.path.exists(args.image_path):
+def evaluation(image_path, saved_path, load_model):
+    #args = parse_args()
+    # if torch.cuda.is_available() and not args.cuda:
+    #     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
+    if not os.path.exists(image_path):
         raise Exception("Image not found")
-    device = torch.device('cuda:0' if args.cuda else 'cpu')
-    image = cv2.imread(args.image_path)
+    device = torch.device('cpu')
+    #device = torch.device('cuda:0' if args.cuda else 'cpu')
+    image = cv2.imread(str(image_path))
     height, width, _ = image.shape
-    ocr_results = generate_tesseract_results.get_tesseract_results(image)
-    vocab, class_mapping = load_saved_vocab(args.saved_path)
-    candidates = extract_candidates.get_candidates(ocr_results)
+    #ocr_results = generate_tesseract_results.get_tesseract_results(str(image_path))
+    folder = Path('data/textract_results')
+    ocr_path = folder / (image_path.split('/')[-1].split('.')[0] +'.json')
+    with open(ocr_path, 'r') as f:
+        ocr_results = json.load(f)
+    vocab, class_mapping = load_saved_vocab(saved_path)
+    candidates = extract_candidates.get_candidates(ocr_results, height, width)
     candidates_with_neighbours = attach_neighbour_candidates(width, height, ocr_results, candidates)
     annotation = normalize_coordinates(candidates_with_neighbours, width, height)
     _data = parse_input(annotation, class_mapping, config.NEIGHBOURS, vocab)
-    field_ids, candidate_cords, neighbours, neighbour_cords = _data
-    rlie = torch.load(args.load_model)
+    field_ids, candidate_cords, neighbours, neighbour_cords, mask = _data
+    rlie = torch.load(load_model)
     rlie = rlie.to(device)
     field_ids = field_ids.to(device)
     candidate_cords = candidate_cords.to(device)
@@ -140,7 +164,7 @@ def main():
     field_idx_candidate = np.argmax(field_ids.detach().to('cpu').numpy(), axis=1)
     with torch.no_grad():
         rlie.eval()
-        val_outputs = rlie(field_ids, candidate_cords, neighbours, neighbour_cords)
+        val_outputs = rlie(field_ids, candidate_cords, neighbours, neighbour_cords, mask)
     val_outputs = val_outputs.to('cpu').numpy()
     out = {cl: np.argmax(val_outputs[np.where(field_idx_candidate == cl)]) for cl in np.unique(field_idx_candidate)}
     true_candidate_color = (0, 255, 0)
@@ -152,13 +176,15 @@ def main():
             cand = candidates[key][candidate_idx]
             output_candidates[key] = cand['text']
             cand_coords = [cand['x1'], cand['y1'], cand['x2'], cand['y2']]
-            cv2.rectangle(output_image, (cand_coords[0], cand_coords[1]), (cand_coords[2], cand_coords[3]),
-                          true_candidate_color, 5)
-    if args.visualize:
-        cv2.imshow('Visualize', output_image)
-        cv2.waitKey(0)
+            # cv2.rectangle(output_image, (cand_coords[0], cand_coords[1]), (cand_coords[2], cand_coords[3]),
+            #               true_candidate_color, 5)
+    print(output_candidates)
+    # if args.visualize:
+    #     cv2.imshow('Visualize', output_image)
+    #     cv2.waitKey(0)
+
     return output_candidates
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()

@@ -34,7 +34,20 @@ def get_data(xml_path, split_name='train'):
                                                                     'invoice_date': {'true_candidates': [],
                                                                                      'other_candidates': []},
                                                                     'total': {'true_candidates': [],
-                                                                              'other_candidates': []}}}
+                                                                              'other_candidates': []},
+                                                                    'due_date': {
+                                                                        'true_candidates': [],
+                                                                        'other_candidates': []},
+                                                                    'payment_terms': {
+                                                                        'true_candidates': [],
+                                                                        'other_candidates': []},
+                                                                    'purchase_order': {
+                                                                        'true_candidates': [],
+                                                                        'other_candidates': []},
+                                                                    'total_tax_amount': {
+                                                                        'true_candidates': [],
+                                                                        'other_candidates': []}
+                                                                    }}
             for i, cls in enumerate(annotation_data['fields']):
                 if cls not in classes_count:
                     classes_count[cls] = 0

@@ -50,6 +50,7 @@ def train(model, train_dataloader, val_dataloader, epochs):
             optimizer.step()
 
             preds = outputs.round()
+            #preds = (outputs > 0.7).float()
             y_preds.extend(list(preds.cpu().detach().numpy().reshape(1, -1)[0]))
             y_labels.extend(list(labels.cpu().detach().numpy().reshape(1, -1)[0]))
 
@@ -77,7 +78,7 @@ def train(model, train_dataloader, val_dataloader, epochs):
             writer.add_scalar('Loss/validation', val_loss, epoch)
             writer.add_scalar('Accuracy/validation', val_accuracy, epoch)
             if val_recall > val_max_score: # Saving the best model
-                print('saving model....')
+                print('saving model!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
                 val_max_score = val_recall
                 torch.save(model, 'output/model.pth')
             print(f"Metrics for Epoch {epoch}:  Loss:{round(train_loss, 4)} \
@@ -93,7 +94,7 @@ def train(model, train_dataloader, val_dataloader, epochs):
         'training_recall': recall_history,
         'validation_loss': val_loss_history,
         'validation_accuracy': val_accuracy_history,
-        'validation_recall': recall_history
+        'validation_recall': val_recall_history
     }
 
 

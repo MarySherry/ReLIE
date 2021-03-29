@@ -6,6 +6,9 @@ from tqdm import tqdm
 import os
 import json
 
+import extract_candidates
+from utils import config
+
 
 def get_tesseract_results(image_path):
     image = cv2.imread(image_path)
@@ -16,7 +19,7 @@ def get_tesseract_results(image_path):
 
 if __name__ == '__main__':
 
-    dataset_dir = 'path/to/dataset/directory'
+    dataset_dir = 'data'
     images_dir = os.path.join(dataset_dir, 'images')
     tesseract_results = os.path.join(dataset_dir, 'tesseract_results_lstm')
 
@@ -24,10 +27,15 @@ if __name__ == '__main__':
     if not os.path.exists(tesseract_results):
         os.makedirs(tesseract_results)
 
-    images = glob(os.path.join(images_dir, '*.jpg'))
+    images = glob(os.path.join(images_dir, '*.png'))
 
-    for image in tqdm(images[:1], desc='Generating Tesseract Results'):
+    for image in tqdm(images, desc='Generating Tesseract Results'):
         image_name = os.path.splitext(os.path.split(image)[-1])[0]
         result = get_tesseract_results(image)
+        candidate_data = extract_candidates.get_candidates(result)
+        file_path = config.CANDIDATE_DIR / (
+                    image.split('/')[-1].split('.')[0] + ".json")
+        with open(file_path, 'w') as outfile:
+            json.dump(candidate_data, outfile)
         with open(os.path.join(tesseract_results, image_name + '.json'), 'w') as f:
             json.dump(result, f)

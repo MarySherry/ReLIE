@@ -30,7 +30,7 @@ class DocumentsDataset(data.Dataset):
             print("Class Mapping:", class_mapping)
             print("Classs counts:", classes_count)
             annotation = candidate.attach_candidate(annotation, config.CANDIDATE_DIR)
-            annotation, self.vocab = Neighbour.attach_neighbour(annotation, config.OCR_DIR, vocab_size=config.VOCAB_SIZE)
+            annotation, self.vocab = Neighbour.attach_neighbour(annotation, config.OCR_DIR, config.IMAGE_DIR, vocab_size=config.VOCAB_SIZE)
             annotation = op.normalize_positions(annotation)
             _data = preprocess.parse_input(annotation, class_mapping, config.NEIGHBOURS, self.vocab)
             self.field_ids, self.candidate_cords, self.neighbours, self.neighbour_cords, self.mask, self.labels = _data

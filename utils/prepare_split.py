@@ -2,10 +2,10 @@ from pathlib import Path
 from random import shuffle
 
 ROOT_DIR = Path.cwd()
-SAVE_DIR = ROOT_DIR / 'dataset/split/'
-ANNOTATION_DIR = ROOT_DIR / 'dataset/xmls/'
+SAVE_DIR = ROOT_DIR / 'data/split/'
+ANNOTATION_DIR = ROOT_DIR / 'data/xmls/'
 
-TRAIN_SPLIT_RATIO = 0.8
+TRAIN_SPLIT_RATIO = 0.8572
 
 if not SAVE_DIR.exists():
     SAVE_DIR.mkdir(parents=True)
