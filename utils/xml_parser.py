@@ -29,11 +29,11 @@ def get_data(xml_path, split_name='train'):
                 continue
 
             annotation_data = {'filename': annot.stem, 'width': element_width,
-                               'height': element_height, 'fields': {'invoice_no': {'true_candidates': [],
+                               'height': element_height, 'fields': {'invoice_id': {'true_candidates': [],
                                                                                    'other_candidates': []},
                                                                     'invoice_date': {'true_candidates': [],
                                                                                      'other_candidates': []},
-                                                                    'total': {'true_candidates': [],
+                                                                    'total_amount': {'true_candidates': [],
                                                                               'other_candidates': []},
                                                                     'due_date': {
                                                                         'true_candidates': [],
@@ -45,6 +45,15 @@ def get_data(xml_path, split_name='train'):
                                                                         'true_candidates': [],
                                                                         'other_candidates': []},
                                                                     'total_tax_amount': {
+                                                                        'true_candidates': [],
+                                                                        'other_candidates': []},
+                                                                    'net_amount': {
+                                                                        'true_candidates': [],
+                                                                        'other_candidates': []},
+                                                                    'receiver_address': {
+                                                                        'true_candidates': [],
+                                                                        'other_candidates': []},
+                                                                    'ship_to_address': {
                                                                         'true_candidates': [],
                                                                         'other_candidates': []}
                                                                     }}

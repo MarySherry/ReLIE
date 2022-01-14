@@ -5,7 +5,7 @@ ROOT_DIR = Path.cwd()
 SAVE_DIR = ROOT_DIR / 'data/split/'
 ANNOTATION_DIR = ROOT_DIR / 'data/xmls/'
 
-TRAIN_SPLIT_RATIO = 0.8572
+TRAIN_SPLIT_RATIO = 0.8
 
 if not SAVE_DIR.exists():
     SAVE_DIR.mkdir(parents=True)

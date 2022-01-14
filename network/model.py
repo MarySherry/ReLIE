@@ -14,7 +14,7 @@ class Model(nn.Module):
         super().__init__()
 
         self.cand_embed = nn.Linear(2, 128)
-        self.field_embed = nn.Linear(7, embedding_dim)
+        self.field_embed = nn.Linear(10, embedding_dim)
         self.embedding_dimension = embedding_dim
         self.neighbour_embeddings = NeighbourEmbedding(vocab_size, embedding_dim)
 

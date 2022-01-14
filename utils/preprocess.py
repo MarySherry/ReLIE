@@ -43,7 +43,7 @@ def get_neighbours(list_of_neighbours, vocabulary, n_neighbours):
     return neighbours, neighbour_cords
 
 
-def parse_input(annotations, fields_dict, n_neighbours=5, vocabulary=None):
+def parse_input(annotations, fields_dict, n_neighbours=3, vocabulary=None):
     """Generates input samples from annotations data."""
     
     field_ids = list()

@@ -29,6 +29,7 @@ def evaluate(model, val_dataloader, criterion):
             validation_loss = criterion(val_outputs, val_labels)
 
             val_preds = val_outputs.round()
+            #val_preds = (val_outputs > 0.7).float()
             y_preds.extend(list(val_preds.cpu().detach().numpy().reshape(1, -1)[0]))
             y_labels.extend(list(val_labels.cpu().detach().numpy().reshape(1, -1)[0]))
 

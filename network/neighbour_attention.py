@@ -1,21 +1,18 @@
 import torch
-import torch.nn as nn
 import math
 import torch.nn.functional as F
+import torch.nn as nn
+from typing import Optional
 
 
-def attention(q, k, v, d_k, mask=None, dropout=None):
+def attention(q, k, v, d_k: int, mask: Optional[torch.Tensor] =None, dropout: Optional[float] = None):
     scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
-
     if mask is not None:
         mask = mask.unsqueeze(1)
         scores = scores.masked_fill(mask == 0, -1e9)
-
     scores = F.softmax(scores, dim=-1)
-
     if dropout is not None:
-        scores = dropout(scores)
-
+        scores = F.dropout(scores)
     output = torch.matmul(scores, v)
     return output
 
@@ -34,7 +31,7 @@ class MultiHeadAttention(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.out = nn.Linear(d_model, d_model)
 
-    def forward(self, q, k, v, mask=None):
+    def forward(self, q, k, v, mask: Optional[torch.Tensor]=None):
         bs = q.size(0)
 
         # perform linear operation and split into h heads
@@ -49,7 +46,7 @@ class MultiHeadAttention(nn.Module):
         q = q.transpose(1, 2)
         v = v.transpose(1, 2)
         # calculate attention using function we will define next
-        scores = attention(q, k, v, self.d_k, mask, self.dropout)
+        scores = attention(q, k, v, self.d_k, mask, self.dropout.p)
 
         # concatenate heads and put through final linear layer
         concat = scores.transpose(1, 2).contiguous() \

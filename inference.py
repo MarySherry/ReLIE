@@ -2,7 +2,8 @@ import torch
 import cv2
 from utils import Neighbour, config, preprocess
 import generate_tesseract_results
-import extract_candidates
+import extract_candidates_tesseract
+import extract_candidates_textract
 import pickle
 import traceback
 import numpy as np
@@ -36,8 +37,8 @@ def attach_neighbour_candidates(width, height, ocr_data, candidates):
                           'Height'] * height + item['Geometry']['BoundingBox'][
                           'Top'] * height})
 
-    x_offset = int(width * 0.1)
-    y_offset = int(height * 0.1)
+    x_offset = int(width * 0.3)
+    y_offset = int(height * 0.02)
     for cls, both_cads in candidates.items():
         for cad in both_cads:
             neighbours = Neighbour.find_neighbour(cad, words, x_offset, y_offset, width, height)
@@ -145,14 +146,19 @@ def evaluation(image_path, saved_path, load_model):
     image = cv2.imread(str(image_path))
     height, width, _ = image.shape
     #ocr_results = generate_tesseract_results.get_tesseract_results(str(image_path))
+    # folder = Path('data2/textract_results')
     folder = Path('data/textract_results')
     ocr_path = folder / (image_path.split('/')[-1].split('.')[0] +'.json')
     with open(ocr_path, 'r') as f:
         ocr_results = json.load(f)
+    #print(ocr_results)
     vocab, class_mapping = load_saved_vocab(saved_path)
-    candidates = extract_candidates.get_candidates(ocr_results, height, width)
+    # candidates = extract_candidates_tesseract.get_candidates(ocr_results, height, width)
+    candidates = extract_candidates_textract.get_candidates(ocr_results,
+                                                              height, width)
     candidates_with_neighbours = attach_neighbour_candidates(width, height, ocr_results, candidates)
     annotation = normalize_coordinates(candidates_with_neighbours, width, height)
+    #print(annotation['total_tax_amount'])
     _data = parse_input(annotation, class_mapping, config.NEIGHBOURS, vocab)
     field_ids, candidate_cords, neighbours, neighbour_cords, mask = _data
     rlie = torch.load(load_model)
@@ -178,7 +184,7 @@ def evaluation(image_path, saved_path, load_model):
             cand_coords = [cand['x1'], cand['y1'], cand['x2'], cand['y2']]
             # cv2.rectangle(output_image, (cand_coords[0], cand_coords[1]), (cand_coords[2], cand_coords[3]),
             #               true_candidate_color, 5)
-    print(output_candidates)
+    #print(output_candidates)
     # if args.visualize:
     #     cv2.imshow('Visualize', output_image)
     #     cv2.waitKey(0)

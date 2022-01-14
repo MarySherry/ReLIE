@@ -2,6 +2,7 @@ import json
 import traceback
 from tqdm import tqdm
 import cv2
+import re
 
 from utils import operations as op
 from utils import vocabulary
@@ -44,7 +45,8 @@ def find_neighbour(cad, words, x_offset, y_offset, width, height):
 
     for i, iou in enumerate(iou_scores):
         if iou > 0.5:
-            neighbours.append(words_copy[i])
+            if not re.search('[0-9]', words_copy[i]['text']):
+                neighbours.append(words_copy[i])
 
     return neighbours
 
@@ -62,32 +64,32 @@ def attach_neighbour(annotation, ocr_path, im_path, vocab_size):
             with open(ocr_json, 'r') as f:
                 ocr_data = json.load(f)
 
-            # empty_index = [i for i, ele in enumerate(ocr_data['text']) if ele == ""]
-            # for key in ocr_data.keys():
-            #     ocr_data[key] = [j for i, j in enumerate(ocr_data[key]) if i not in empty_index]
-            #
-            # words = []
-            # for txt, x, y, w, h in zip(ocr_data['text'], ocr_data['left'], ocr_data['top'], ocr_data['width'],
-            #                            ocr_data['height']):
-            #     x2 = x + w
-            #     y2 = y + h
-            #
-            #     words.append({'text': txt, 'x1': x, 'y1': y, 'x2': x2, 'y2': y2})
-            #
-            #     vocab_builder.add(txt)
+            empty_index = [i for i, ele in enumerate(ocr_data['text']) if ele == ""]
+            for key in ocr_data.keys():
+                ocr_data[key] = [j for i, j in enumerate(ocr_data[key]) if i not in empty_index]
 
-            BlockType_word = [item for item in ocr_data['Blocks'] if
-                              item['BlockType'] == 'WORD']
             words = []
-            for item in BlockType_word:
-                words.append({
-                    'text': item['Text'],
-                    'x1': item['Geometry']['BoundingBox']['Left'] * width,
-                    'y1': item['Geometry']['BoundingBox']['Top'] * height,
-                    'x2': item['Geometry']['BoundingBox']['Left'] * width + item['Geometry']['BoundingBox']['Width'] * width,
-                    'y2': item['Geometry']['BoundingBox'][
-                                  'Height'] * height + item['Geometry']['BoundingBox']['Top'] * height})
-                vocab_builder.add(item['Text'])
+            for txt, x, y, w, h in zip(ocr_data['text'], ocr_data['left'], ocr_data['top'], ocr_data['width'],
+                                       ocr_data['height']):
+                x2 = x + w
+                y2 = y + h
+
+                words.append({'text': txt, 'x1': x, 'y1': y, 'x2': x2, 'y2': y2})
+
+                vocab_builder.add(txt)
+
+            # BlockType_word = [item for item in ocr_data['Blocks'] if
+            #                   item['BlockType'] == 'WORD']
+            # words = []
+            # for item in BlockType_word:
+            #     words.append({
+            #         'text': item['Text'],
+            #         'x1': item['Geometry']['BoundingBox']['Left'] * width,
+            #         'y1': item['Geometry']['BoundingBox']['Top'] * height,
+            #         'x2': item['Geometry']['BoundingBox']['Left'] * width + item['Geometry']['BoundingBox']['Width'] * width,
+            #         'y2': item['Geometry']['BoundingBox'][
+            #                       'Height'] * height + item['Geometry']['BoundingBox']['Top'] * height})
+            #     vocab_builder.add(item['Text'])
 
             x_offset = int(anno['width'] * 0.1)
             y_offset = int(anno['height'] * 0.1)
